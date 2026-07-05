@@ -39,7 +39,7 @@ Do **not** work tickets in parallel or out of order — later tickets build on e
 1. **One ticket per session.** Work only the ticket the user names. When done, **stop and tell the user** before starting the next.
 2. **Plan mode first.** Read the Linear ticket + this file, propose a plan, and wait for approval **before editing**.
 3. **Build**, then **verify against the ticket's acceptance criteria** — that's the quality gate.
-4. **Commit** on the ticket's branch (Linear generates the name, e.g. `gre-5-set-up-garmindb...`).
+4. **Commit and push to `origin`** (`https://github.com/gregbrenner27/triathlon`). Solo project → committing straight to `main` is fine; use a ticket branch + PR only if the user asks.
 5. **Set the Linear ticket to Done**, then stop.
 
 ### ⚠️ Manual gate — GRE-5 (Garmin login)
