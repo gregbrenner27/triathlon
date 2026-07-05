@@ -1,5 +1,6 @@
 # --- Garmin data & secrets (NEVER commit) ---
-data/
+/data/
+*.log
 *.db
 *.sqlite
 *.sqlite3

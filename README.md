@@ -26,6 +26,38 @@ Garmin → GarminDB (local SQLite) → data layer → per-workout classifier
 
 Python · GarminDB · pandas · scikit-learn · Streamlit
 
+## Setup (data foundation — GRE-5)
+
+Requires **Python 3.11+** (`brew install python@3.12` on macOS).
+
+```bash
+# 1. Environment
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Configure GarminDB (one-time)
+#    Copy the example config into place, then edit it with your Garmin Connect
+#    email/password and data start dates:
+mkdir -p ~/.GarminDb
+cp .venv/lib/python3.12/site-packages/garmindb/GarminConnectConfig.json.example \
+   ~/.GarminDb/GarminConnectConfig.json
+
+# 3. Full historical download + build the SQLite DBs (~/HealthData/DBs)
+#    Run interactively — Garmin Connect will prompt for an MFA code on first
+#    login; tokens are then cached locally so later syncs don't re-prompt.
+garmindb_cli.py --all --download --import --analyze
+
+# 4. Incremental sync (run anytime to pull only new activities)
+garmindb_cli.py --all --download --import --analyze --latest
+# or: python -m triathlon_engine.data.sync          # incremental
+#     python -m triathlon_engine.data.sync full     # full re-download
+```
+
+Notes:
+- Garmin archives intraday data older than ~6 months ("cold storage") — sync regularly to accumulate history.
+- All Garmin data and credentials stay outside the repo (`~/HealthData`, `~/.GarminDb`) and are gitignored anyway.
+
 ## Status
 
 In development — tracked in Linear (`GRE-5` … `GRE-12`). See [CLAUDE.md](./CLAUDE.md) for architecture,
