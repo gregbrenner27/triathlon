@@ -227,13 +227,28 @@ def fit_bike() -> PaceCurve:
 
 
 def race_predictions(level: float = 0.9) -> pd.DataFrame:
-    """Predicted leg time + pace + uncertainty at sprint-race distances."""
+    """Predicted leg time + pace + uncertainty at sprint-race distances.
+
+    Legs with a fitted curve use it (``source='curve'``). The bike leg falls
+    back to the physics estimate from Greg's self-reported indoor watts
+    (``source='power-model'``) until outdoor ride data exists.
+    """
     rows = []
     for sport, fit_fn in {"swim": fit_swim, "bike": fit_bike, "run": fit_run}.items():
         curve = fit_fn()
         d = RACE_DISTANCES_KM[sport]
         mid = curve.predict_time_s(d)
         lo, hi = curve.prediction_interval_s(d, level)
+        source, note = "curve", curve.message
+        ok = curve.ok
+        if sport == "bike" and not curve.ok:
+            from .bike_estimate import bike_leg_estimate
+
+            est = bike_leg_estimate(d)
+            mid, lo, hi = est.time_s, est.time_lo_s, est.time_hi_s
+            source = est.source
+            note = f"{curve.message}; using power-model estimate meanwhile"
+            ok = True
         pace = (
             mid / (d * 10) if sport == "swim" else mid / d
         )  # s/100m or s/km
@@ -241,7 +256,8 @@ def race_predictions(level: float = 0.9) -> pd.DataFrame:
             {
                 "sport": sport,
                 "distance_km": d,
-                "ok": curve.ok,
+                "ok": ok,
+                "source": source,
                 "time_s": mid,
                 "time_lo_s": lo,
                 "time_hi_s": hi,
@@ -250,7 +266,7 @@ def race_predictions(level: float = 0.9) -> pd.DataFrame:
                 "n_points": curve.n_points,
                 "r2": curve.r2,
                 "riegel_exponent": curve.slope,
-                "note": curve.message,
+                "note": note,
             }
         )
     return pd.DataFrame(rows)
