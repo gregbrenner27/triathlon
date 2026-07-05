@@ -199,6 +199,54 @@ def get_activity_meta(activity_id: str | None = None) -> pd.DataFrame:
     return df
 
 
+def get_swim_sets(activity_id: str) -> pd.DataFrame:
+    """Swim sets (active laps) parsed from the activity FIT file.
+
+    GarminDB's activity_laps rows are empty for pool swims, but the FIT lap
+    messages carry the real set structure: distance (km), swim time, lengths,
+    stroke. Rest laps (zero distance) are dropped. Columns: ``set`` (order),
+    ``distance_m``, ``time_s``, ``n_lengths``, ``pace_s_per_100m``.
+    """
+    columns = ["set", "distance_m", "time_s", "n_lengths", "pace_s_per_100m"]
+    fit_path = FIT_DIR / f"{activity_id}_ACTIVITY.fit"
+    if not fit_path.exists():
+        return pd.DataFrame(columns=columns)
+
+    from fitfile import File  # deferred: fitfile import is slow
+
+    try:
+        fit = File(str(fit_path))
+    except Exception:
+        return pd.DataFrame(columns=columns)
+    rows = []
+    for msg_type in fit.message_types:
+        if not str(msg_type).endswith(".lap"):
+            continue
+        for i, msg in enumerate(fit[msg_type]):
+            f = msg.fields
+            dist_km = f.get("total_distance") or 0.0
+            timer = f.get("total_timer_time")
+            time_s = (
+                timer.hour * 3600 + timer.minute * 60 + timer.second
+                + timer.microsecond / 1e6
+                if timer is not None
+                else np.nan
+            )
+            if dist_km <= 0 or not time_s or time_s != time_s:
+                continue  # rest lap or unusable
+            dist_m = dist_km * 1000.0
+            rows.append(
+                {
+                    "set": i,
+                    "distance_m": dist_m,
+                    "time_s": time_s,
+                    "n_lengths": f.get("num_active_lengths"),
+                    "pace_s_per_100m": time_s / (dist_m / 100.0),
+                }
+            )
+    return pd.DataFrame(rows, columns=columns)
+
+
 def get_workout_steps(activity_id: str) -> pd.DataFrame:
     """Structured-workout steps embedded in the activity FIT file.
 

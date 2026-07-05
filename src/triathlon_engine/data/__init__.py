@@ -5,6 +5,7 @@ from .access import (
     get_activity_meta,
     get_laps,
     get_records,
+    get_swim_sets,
     get_workout_steps,
     normalize_sport,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "get_activity_meta",
     "get_laps",
     "get_records",
+    "get_swim_sets",
     "get_workout_steps",
     "normalize_sport",
 ]
