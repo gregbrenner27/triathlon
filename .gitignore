@@ -1,0 +1,38 @@
+# --- Garmin data & secrets (NEVER commit) ---
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.fit
+*.tcx
+*.gpx
+HealthData/
+.garminconnect/
+GarminConnectConfig.json
+.env
+.env.*
+secrets.toml
+.streamlit/secrets.toml
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.python-version
+
+# --- Notebooks ---
+.ipynb_checkpoints/
+
+# --- Tooling / OS ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.DS_Store
+.idea/
+.vscode/

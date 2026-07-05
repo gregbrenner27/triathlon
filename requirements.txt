@@ -1,0 +1,16 @@
+# Data layer
+garmindb
+
+# Analysis & modelling
+pandas
+numpy
+scikit-learn
+scipy
+
+# Visualisation / app
+matplotlib
+plotly
+streamlit
+
+# Notebooks (exploration)
+jupyter
