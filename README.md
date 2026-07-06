@@ -58,6 +58,16 @@ Notes:
 - Garmin archives intraday data older than ~6 months ("cold storage") — sync regularly to accumulate history.
 - All Garmin data and credentials stay outside the repo (`~/HealthData`, `~/.GarminDb`) and are gitignored anyway.
 
+## Dashboard
+
+```bash
+streamlit run app/dashboard.py
+```
+
+One command, loads the local GarminDB data (first load builds a cache, ~1 min).
+Sections: race-prediction hero with per-leg breakdown, insight cards, fitness
+readout (critical-speed trend + pace-duration curves), and live what-if sliders.
+
 ## Status
 
 In development — tracked in Linear (`GRE-5` … `GRE-12`). See [CLAUDE.md](./CLAUDE.md) for architecture,

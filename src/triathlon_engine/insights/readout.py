@@ -50,9 +50,15 @@ def critical_speed(efforts: pd.DataFrame) -> tuple[float, float]:
 
 
 def cs_trend(
-    window_weeks: int = _CS_WINDOW_WEEKS, step_weeks: int = _CS_STEP_WEEKS
+    window_weeks: int = _CS_WINDOW_WEEKS,
+    step_weeks: int = _CS_STEP_WEEKS,
+    min_n: int = 30,
 ) -> pd.DataFrame:
-    """Run critical speed per rolling training block — the fitness trend."""
+    """Run critical speed per rolling training block — the fitness trend.
+
+    Blocks with fewer than ``min_n`` effort points produce junk CS fits
+    (few hard efforts → degenerate regression) and are dropped.
+    """
     matrix = run_effort_matrix(list(_CS_TARGETS_KM))
     if matrix.empty:
         return pd.DataFrame(columns=["block_end", "cs_kmh", "d_prime_m", "n"])
@@ -66,7 +72,7 @@ def cs_trend(
             )
         ]
         cs, d_prime = critical_speed(block)
-        if cs == cs:
+        if cs == cs and len(block) >= min_n:
             rows.append(
                 {
                     "block_end": block_end,
