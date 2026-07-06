@@ -257,21 +257,54 @@ with c2, st.container(border=True):
 
 # ---------------------------------------------------------------- what-if
 st.markdown("### What-if")
+st.markdown(
+    '<div class="card-body">Drag a slider and watch each leg update: '
+    "what your swim, bike and run become, and what that does to the finish.</div>",
+    unsafe_allow_html=True,
+)
 with st.container(border=True):
     s1, s2, s3, s4 = st.columns(4, gap="medium")
-    swim_d = s1.slider("Swim pace (s/100m)", -30, 15, 0, 5)
-    bike_d = s2.slider("Bike speed (km/h)", -4.0, 6.0, 0.0, 0.5)
-    run_d = s3.slider("Run pace (s/km)", -30, 15, 0, 5)
-    tran_d = s4.slider("Transitions (s)", -120, 60, 0, 15)
+    swim_d = s1.slider("Swim pace change (s/100m)", -30, 15, 0, 5)
+    bike_d = s2.slider("Bike speed change (km/h)", -4.0, 6.0, 0.0, 0.5)
+    run_d = s3.slider("Run pace change (s/km)", -30, 15, 0, 5)
+    tran_d = s4.slider("Transition time change (s)", -120, 60, 0, 15)
 
-    swim_t = legs["Swim"].time_s + swim_d * RACE_DISTANCES_KM["swim"] * 10
-    v_old = RACE_DISTANCES_KM["bike"] / (legs["Bike"].time_s / 3600.0)
-    bike_t = RACE_DISTANCES_KM["bike"] / max(v_old + bike_d, 1e-6) * 3600.0
-    run_t = legs["Run"].time_s + run_d * RACE_DISTANCES_KM["run"]
-    tran_t = max(legs["T1"].time_s + legs["T2"].time_s + tran_d, 0.0)
+    # baseline per-leg paces
+    swim_pace_0 = legs["Swim"].time_s / (RACE_DISTANCES_KM["swim"] * 10)  # s/100m
+    bike_v_0 = RACE_DISTANCES_KM["bike"] / (legs["Bike"].time_s / 3600.0)  # km/h
+    run_pace_0 = legs["Run"].time_s / RACE_DISTANCES_KM["run"]  # s/km
+    tran_0 = legs["T1"].time_s + legs["T2"].time_s
+
+    # adjusted paces → leg times
+    swim_pace = swim_pace_0 + swim_d
+    bike_v = max(bike_v_0 + bike_d, 1e-6)
+    run_pace = run_pace_0 + run_d
+    swim_t = swim_pace * RACE_DISTANCES_KM["swim"] * 10
+    bike_t = RACE_DISTANCES_KM["bike"] / bike_v * 3600.0
+    run_t = run_pace * RACE_DISTANCES_KM["run"]
+    tran_t = max(tran_0 + tran_d, 0.0)
     new_finish = swim_t + bike_t + run_t + tran_t
     delta = new_finish - forecast.finish_s
 
+    def leg_metric(col, name, pace_txt, new_t, old_t):
+        d = new_t - old_t
+        col.metric(
+            f"{name} · {pace_txt}",
+            fmt(new_t),
+            delta=None if abs(d) < 1 else f"{'+' if d > 0 else '-'}{fmt(abs(d))}",
+            delta_color="inverse",  # less time = green
+            help=f"was {fmt(old_t)}",
+        )
+
+    st.markdown('<div class="kicker" style="margin-top:.6rem">Your race at these settings</div>',
+                unsafe_allow_html=True)
+    c_swim, c_bike, c_run, c_tran = st.columns(4, gap="medium")
+    leg_metric(c_swim, "Swim 750m", f"{fmt(swim_pace)} /100m", swim_t, legs["Swim"].time_s)
+    leg_metric(c_bike, "Bike 20k", f"{bike_v:.1f} km/h", bike_t, legs["Bike"].time_s)
+    leg_metric(c_run, "Run 5k", f"{fmt(run_pace)} /km", run_t, legs["Run"].time_s)
+    leg_metric(c_tran, "T1 + T2", "combined", tran_t, tran_0)
+
+    st.divider()
     m1, m2 = st.columns(2)
     m1.metric("Adjusted finish", fmt(new_finish))
     if abs(delta) < 1:
