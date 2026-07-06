@@ -67,7 +67,9 @@ st.markdown(
 
 # ---------------------------------------------------------------- data (cached)
 @st.cache_data(show_spinner="Reading your Garmin history…")
-def load():
+def _load(db_mtime: float):
+    """Cache keyed on the activities DB's mtime — a GarminDB sync changes it,
+    so a page refresh after a sync recomputes everything automatically."""
     labeled = label_activities()
     forecast = predict_race()
     return {
@@ -104,6 +106,12 @@ def base_layout(fig: go.Figure, height: int = 300) -> go.Figure:
     fig.update_yaxes(gridcolor=GRID, linecolor=NEUTRAL, zeroline=False,
                      tickcolor=MUTED, tickfont=dict(color=MUTED))
     return fig
+
+
+def load():
+    from triathlon_engine.data.access import ACTIVITIES_DB
+
+    return _load(ACTIVITIES_DB.stat().st_mtime)
 
 
 D = load()
