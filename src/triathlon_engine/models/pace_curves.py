@@ -112,14 +112,19 @@ def _fit_power_law(points: pd.DataFrame, sport: str) -> PaceCurve:
     )
 
 
-def run_best_efforts(targets_km: list[float] = RUN_TARGETS_KM) -> pd.DataFrame:
-    """Fastest sustained effort per target distance across all runs.
+def run_effort_matrix(targets_km: list[float] = RUN_TARGETS_KM) -> pd.DataFrame:
+    """Per-activity fastest sustained effort per target distance.
 
     Two-pointer sweep over each run's cumulative-distance stream: for each
-    target, the minimum time of any contiguous stretch covering it.
+    target, the minimum time of any contiguous stretch covering it. One row
+    per (activity, target); includes ``start_time`` so callers can slice by
+    training block (GRE-11 fitness trend).
     """
     runs = get_activities("run")
-    ids = tuple(runs["activity_id"].astype(str))
+    starts = dict(
+        zip(runs["activity_id"].astype(str), runs["start_time"], strict=True)
+    )
+    ids = tuple(starts)
     with sqlite3.connect(ACTIVITIES_DB) as con:
         recs = pd.read_sql_query(
             "select activity_id, timestamp, distance from activity_records "
@@ -130,7 +135,7 @@ def run_best_efforts(targets_km: list[float] = RUN_TARGETS_KM) -> pd.DataFrame:
             parse_dates=["timestamp"],
         )
 
-    best: dict[float, dict] = {}
+    rows = []
     for aid, g in recs.groupby("activity_id"):
         dist = g["distance"].to_numpy()  # cumulative km
         t = (g["timestamp"] - g["timestamp"].iloc[0]).dt.total_seconds().to_numpy()
@@ -145,15 +150,29 @@ def run_best_efforts(targets_km: list[float] = RUN_TARGETS_KM) -> pd.DataFrame:
                 while dist[hi] - dist[lo] >= target:
                     fastest = min(fastest, t[hi] - t[lo])
                     lo += 1
-            if np.isfinite(fastest) and (
-                target not in best or fastest < best[target]["time_s"]
-            ):
-                best[target] = {
-                    "distance_km": target,
-                    "time_s": fastest,
-                    "activity_id": aid,
-                }
-    return pd.DataFrame(sorted(best.values(), key=lambda r: r["distance_km"]))
+            if np.isfinite(fastest):
+                rows.append(
+                    {
+                        "activity_id": aid,
+                        "start_time": starts[aid],
+                        "distance_km": target,
+                        "time_s": fastest,
+                    }
+                )
+    return pd.DataFrame(rows)
+
+
+def run_best_efforts(targets_km: list[float] = RUN_TARGETS_KM) -> pd.DataFrame:
+    """Fastest sustained effort per target distance across all runs."""
+    matrix = run_effort_matrix(targets_km)
+    if matrix.empty:
+        return matrix
+    idx = matrix.groupby("distance_km")["time_s"].idxmin()
+    return (
+        matrix.loc[idx, ["distance_km", "time_s", "activity_id"]]
+        .sort_values("distance_km")
+        .reset_index(drop=True)
+    )
 
 
 def swim_best_efforts() -> pd.DataFrame:
